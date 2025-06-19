@@ -1,103 +1,80 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from "react";
+import { fetchAPI, ApiResponse } from "./utils/fetchAPI";
+
+export default function HomePage() {
+  const [url, setUrl] = useState("");
+  const [method, setMethod] = useState("GET");
+  const [body, setBody] = useState("");
+  const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setResponse(null);
+
+    const res = await fetchAPI({
+      url,
+      method,
+      body: body || undefined,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    setResponse(res);
+    setLoading(false);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <main className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Mini Postman</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="https://api.example.com/endpoint"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="w-full border p-2 rounded"
+          required
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          className="border p-2 rounded"
+        >
+          {["GET", "POST", "PUT", "DELETE", "PATCH"].map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
+        {["POST", "PUT", "PATCH"].includes(method) && (
+          <textarea
+            placeholder='Request body (JSON)'
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full border p-2 rounded h-32"
+          />
+        )}
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+          {loading ? "Sending..." : "Send Request"}
+        </button>
+      </form>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {response && (
+        <div className="mt-6 border-t pt-4">
+          <h2 className="text-xl font-semibold mb-2">Response</h2>
+          <p>Status: {response.status} {response.statusText}</p>
+          <p>Time: {response.durationMs}ms</p>
+          <pre className="bg-gray-100 p-4 rounded overflow-auto mt-2 text-sm">
+            {typeof response.body === "object"
+              ? JSON.stringify(response.body, null, 2)
+              : response.body}
+          </pre>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      )}
+      {response?.error && (
+        <p className="text-red-600 mt-2">Error: {response.error}</p>
+      )}
+    </main>
   );
 }
