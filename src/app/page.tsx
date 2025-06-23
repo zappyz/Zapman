@@ -35,7 +35,7 @@ export default function HomePage() {
 
     setResponse(res);
     setLoading(false);
-    setViewMode("json"); // reset to json view on new response
+    setViewMode("json");
   };
 
   const safeJsonParse = (str: string) => {
@@ -54,7 +54,7 @@ export default function HomePage() {
 
   const addHeaderField = () => setHeaders([...headers, { key: "", value: "" }]);
 
-  // Convert JSON object to XML string (simple version)
+  // Convert JSON object to XML string
   const jsonToXml = (obj: any, indent = ""): string => {
     let xml = "";
     for (const prop in obj) {
@@ -69,13 +69,10 @@ export default function HomePage() {
     return xml;
   };
 
-  // Simple pretty format for XML string
   const formatXml = (xml: string) => {
-    // For now just trim trailing whitespace - can improve with a library
     return xml.trim();
   };
 
-  // Render response body based on viewMode
   const renderBody = () => {
     if (!response) return null;
 
@@ -96,7 +93,6 @@ export default function HomePage() {
     }
 
     if (viewMode === "xml") {
-      // If response.body is object try convert, else show raw text
       let xmlStr = "";
       if (typeof response.body === "object") {
         xmlStr = formatXml(jsonToXml(response.body));
@@ -113,7 +109,6 @@ export default function HomePage() {
     }
 
     if (viewMode === "html") {
-      // Only render HTML if content-type includes "html"
       if (response.contentType.includes("html")) {
         return (
           <div
@@ -133,12 +128,10 @@ export default function HomePage() {
     return null;
   };
 
-  // Prepare text to copy to clipboard depending on view mode
   const getCopyText = (): string => {
     if (!response) return "";
 
     if (response.rawText) {
-      // If rawText exists, prefer it because it preserves exact formatting
       return response.rawText;
     }
 

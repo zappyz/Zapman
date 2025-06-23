@@ -46,7 +46,6 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
 
     let parsedBody: any;
 
-    // Determine format: prefer explicit responseFormat, else guess from content-type
     const format = responseFormat?.toLowerCase() || "";
 
     if (format === "json" || (!format && contentType.includes("application/json"))) {
