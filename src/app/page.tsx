@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fetchAPI, ApiResponse } from "./utils/fetchAPI";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, TooltipProps } from "recharts";
 
 export default function HomePage() {
   const [url, setUrl] = useState("");
@@ -12,6 +13,15 @@ export default function HomePage() {
   const [headers, setHeaders] = useState([{ key: "", value: "" }]);
   const [viewMode, setViewMode] = useState<"json" | "xml" | "html">("json");
   const [copied, setCopied] = useState(false);
+
+  type HistoryEntry = {
+    url: string;
+    method: string;
+    durationMs: number;
+    timestamp: number;
+  };
+
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +44,17 @@ export default function HomePage() {
     });
 
     setResponse(res);
+
+    setHistory(prev => [
+      ...prev.slice(-19),
+      {
+        url,
+        method,
+        timestamp: Date.now(),
+        durationMs: res.durationMs,
+      }
+    ]);
+
     setLoading(false);
     setViewMode("json");
   };
@@ -174,10 +195,37 @@ export default function HomePage() {
     }
   };
 
+  const CustomTooltip = (props: TooltipProps<number, string>) => {
+    const { active, payload, label } = props as any;
+    if (active && payload && payload.length > 0) {
+      const data = payload[0].payload as HistoryEntry;
+
+      return (
+        <div
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            color: "white",
+            padding: 10,
+            borderRadius: 6,
+            maxWidth: 300,
+            fontSize: 12,
+            whiteSpace: "normal",
+          }}
+        >
+          <div><strong>URL:</strong> {data.url}</div>
+          <div><strong>Method:</strong> {data.method}</div>
+          <div><strong>Duration:</strong> {data.durationMs} ms</div>
+          <div><strong>Time:</strong> {new Date(data.timestamp).toLocaleTimeString()}</div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <main className="p-6 max-w-3xl mx-auto text-white">
       <div className="bg-zinc-900 p-6 rounded-2xl shadow-xl border border-zinc-700">
-        <h1 className="text-3xl font-bold mb-6 text-blue-400">Mini Postman</h1>
+        <h1 className="text-3xl font-bold mb-6 text-blue-400">Zapman</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -275,51 +323,61 @@ export default function HomePage() {
             <p className="mb-3">
               Content-Type: <span className="font-mono">{response.contentType}</span>
             </p>
+            
+            {history.length > 0 && (
+              <div className="mt-10">
+                <h2 className="text-2xl font-bold mb-3 text-blue-400">Request Duration History (last 20)</h2>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={history} barCategoryGap="20%" barGap={5}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                    dataKey="timestamp"
+                    tickFormatter={(ts) =>
+                      new Date(ts).toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })
+                    }
+                    />
+                    <YAxis unit="ms" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                    dataKey="durationMs"
+                    fill="#3b82f6"
+                    maxBarSize={30}
+                    isAnimationActive={true}
+                    animationDuration={500}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
-            <h3 className="font-semibold mt-2 text-sm">Headers:</h3>
-            <pre className="bg-black/30 p-3 rounded text-sm overflow-auto">
-              {JSON.stringify(response.headers, null, 2)}
-            </pre>
-
-            <div className="flex gap-3 mt-4 items-center">
-              <label className="font-semibold text-sm flex items-center gap-2">
-                View as:
-              </label>
+            <div className="flex gap-3 mb-3">
               {["json", "xml", "html"].map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode as "json" | "xml" | "html")}
-                  className={`px-3 py-1 rounded ${
+                  className={`py-1 px-3 rounded-lg text-sm font-semibold transition ${
                     viewMode === mode
-                      ? "bg-blue-600 text-white"
-                      : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                      ? "bg-blue-400 text-black"
+                      : "bg-zinc-700 hover:bg-zinc-600"
                   }`}
-                  type="button"
                 >
                   {mode.toUpperCase()}
                 </button>
               ))}
-
               <button
                 onClick={copyToClipboard}
-                type="button"
-                className={`px-3 py-1 rounded ${
-                  copied
-                    ? "bg-green-600 text-white"
-                    : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                }`}
+                className="ml-auto py-1 px-3 rounded-lg bg-green-500 hover:bg-green-600 text-black font-semibold text-sm"
               >
-                {copied ? "Copied!" : "Copy Body"}
+                {copied ? "Copied!" : "Copy"}
               </button>
             </div>
 
-            <h3 className="font-semibold mt-4 text-sm">Body:</h3>
-            {renderBody()}
+            <div className="overflow-auto max-h-96">{renderBody()}</div>
           </div>
-        )}
-
-        {response?.error && (
-          <p className="text-red-400 mt-4 font-mono">Error: {response.error}</p>
         )}
       </div>
     </main>

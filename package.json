@@ -12,7 +12,8 @@
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-window": "^1.8.11"
+    "react-window": "^1.8.11",
+    "recharts": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

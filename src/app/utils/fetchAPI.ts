@@ -16,6 +16,7 @@ export type ApiResponse = {
   durationMs: number;
   error?: string;
   rawText?: string;
+  sizeInBytes?: number;
 };
 
 export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse> {
@@ -42,6 +43,7 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
 
     const contentType = response.headers.get("content-type") || "";
     const rawText = await response.text();
+    const sizeInBytes = new TextEncoder().encode(rawText).length;
     const durationMs = Date.now() - start;
 
     let parsedBody: any;
@@ -90,6 +92,7 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
       headers: headersObj,
       body: parsedBody,
       durationMs,
+      sizeInBytes,
       ...(includeRawText ? { rawText } : {})
     };
   } catch (error: any) {
