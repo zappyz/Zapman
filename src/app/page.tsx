@@ -54,7 +54,11 @@ export default function HomePage() {
 
   const addHeaderField = () => setHeaders([...headers, { key: "", value: "" }]);
 
-  // Convert JSON object to XML string
+  const removeHeaderField = (index: number) => {
+    const newHeaders = headers.filter((_, i) => i !== index);
+    setHeaders(newHeaders);
+  };
+
   const jsonToXml = (obj: any, indent = ""): string => {
     let xml = "";
     for (const prop in obj) {
@@ -206,7 +210,7 @@ export default function HomePage() {
           <div>
             <label className="block mb-2 font-semibold text-sm">Headers</label>
             {headers.map((h, i) => (
-              <div key={i} className="flex gap-2 mb-2">
+              <div key={i} className="flex gap-2 mb-2 items-center">
                 <input
                   type="text"
                   placeholder="Key"
@@ -221,6 +225,13 @@ export default function HomePage() {
                   value={h.value}
                   onChange={(e) => updateHeader(i, "value", e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => removeHeaderField(i)}
+                  className="text-red-400 text-xs hover:underline"
+                >
+                  Remove
+                </button>
               </div>
             ))}
             <button
