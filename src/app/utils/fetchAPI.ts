@@ -82,7 +82,7 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
 
     const headersObj: Record<string, string> = {};
     response.headers.forEach((value, key) => {
-      headersObj[key] = value;
+      headersObj[key.toLocaleLowerCase()] = value;
     });
 
     return {
