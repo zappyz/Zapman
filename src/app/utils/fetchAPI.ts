@@ -20,6 +20,7 @@ export type ApiResponse = {
   error?: string;
   rawText?: string;
   sizeInBytes?: number;
+  ok: boolean;
 };
 
 export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse> {
@@ -114,6 +115,7 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
         body: parsedBody,
         durationMs,
         sizeInBytes,
+        ok: response.ok,
         ...(includeRawText ? { rawText } : {})
       };
     } catch (error: any) {
@@ -131,6 +133,7 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
           body: null,
           durationMs: Date.now() - start,
           error: error.message,
+          ok: false,
         };
       }
 

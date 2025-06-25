@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import * as Sentry from "@sentry/nextjs"; // 👈 Import Sentry
 import { fetchAPI, ApiResponse } from "./utils/fetchAPI";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, TooltipProps } from "recharts";
 
@@ -35,25 +36,44 @@ export default function HomePage() {
 
     const isJson = headersObj['Content-Type'] === 'application/json';
 
-    const res = await fetchAPI({
-      url,
-      method,
-      headers: headersObj,
-      body: isJson ? safeJsonParse(body) : body,
-      includeRawText: true,
-    });
-
-    setResponse(res);
-
-    setHistory(prev => [
-      ...prev.slice(-19),
-      {
+    try {
+      const res = await fetchAPI({
         url,
         method,
-        timestamp: Date.now(),
-        durationMs: res.durationMs,
+        headers: headersObj,
+        body: isJson ? safeJsonParse(body) : body,
+        includeRawText: true,
+      });
+
+      setResponse(res);
+
+      setHistory(prev => [
+        ...prev.slice(-19),
+        {
+          url,
+          method,
+          timestamp: Date.now(),
+          durationMs: res.durationMs,
+        }
+      ]);
+
+      // 🧠 Add breadcrumb
+      Sentry.addBreadcrumb({
+        category: "http",
+        message: `Requested ${url} (${method})`,
+        level: "info",
+      });
+
+      // 🛑 Log non-2xx responses
+      if (!res.ok) {
+        Sentry.captureMessage(`Non-2xx response: ${res.status} from ${url}`);
       }
-    ]);
+
+    } catch (err) {
+      // 🔥 Log unexpected errors
+      Sentry.captureException(err);
+      console.error("Fetch error:", err);
+    }
 
     setLoading(false);
     setViewMode("json");
@@ -155,10 +175,7 @@ export default function HomePage() {
 
   const getCopyText = (): string => {
     if (!response) return "";
-
-    if (response.rawText) {
-      return response.rawText;
-    }
+    if (response.rawText) return response.rawText;
 
     if (viewMode === "json") {
       if (typeof response.body === "object") {
@@ -190,7 +207,8 @@ export default function HomePage() {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (err) {
+      Sentry.captureException(err); // 👈 log copy failure
       alert("Failed to copy to clipboard");
     }
   };
