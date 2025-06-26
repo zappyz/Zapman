@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import * as Sentry from "@sentry/nextjs"; // 👈 Import Sentry
+import * as Sentry from "@sentry/nextjs";
 import { fetchAPI, ApiResponse } from "./utils/fetchAPI";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, TooltipProps } from "recharts";
 
@@ -57,20 +57,17 @@ export default function HomePage() {
         }
       ]);
 
-      // 🧠 Add breadcrumb
       Sentry.addBreadcrumb({
         category: "http",
         message: `Requested ${url} (${method})`,
         level: "info",
       });
 
-      // 🛑 Log non-2xx responses
       if (!res.ok) {
         Sentry.captureMessage(`Non-2xx response: ${res.status} from ${url}`);
       }
 
     } catch (err) {
-      // 🔥 Log unexpected errors
       Sentry.captureException(err);
       console.error("Fetch error:", err);
     }
@@ -208,7 +205,7 @@ export default function HomePage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      Sentry.captureException(err); // 👈 log copy failure
+      Sentry.captureException(err);
       alert("Failed to copy to clipboard");
     }
   };
