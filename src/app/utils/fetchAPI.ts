@@ -8,6 +8,7 @@ export type ApiRequestOptions = {
   timeoutMs?: number;
   retries?: number;
   retryDelayMs?: number;
+  queryParams?: Record<string, string | number | boolean>;
 };
 
 export type ApiResponse = {
@@ -22,6 +23,15 @@ export type ApiResponse = {
   sizeInBytes?: number;
   ok: boolean;
 };
+
+function buildParams(url: string, params?: Record<string, string | number | boolean>): string {
+  if (!params) return url;
+  const urlObj = new URL(url, window.location.origin);
+  Object.entries(params).forEach(([key, value]) => {
+    urlObj.searchParams.append(key, String(value));
+  });
+  return urlObj.toString();
+}
 
 export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse> {
   const {
@@ -55,7 +65,9 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
         }
       }
 
-      const response = await fetch(url, {
+      const fullUrl = buildParams(url, options.queryParams);
+
+      const response = await fetch(fullUrl, {
         method,
         headers,
         body: requestBody,
