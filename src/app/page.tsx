@@ -96,14 +96,15 @@ export default function HomePage() {
     const newHeaders = headers.filter((_, i) => i !== index);
     setHeaders(newHeaders);
   };
-
-  const jsonToXml = (obj: any, indent = ""): string => {
+  
+  const jsonToXml = (obj: Record<string, unknown>, indent = ""): string => {
     let xml = "";
     for (const prop in obj) {
-      if (!obj.hasOwnProperty(prop)) continue;
+      if (!Object.prototype.hasOwnProperty.call(obj, prop)) continue;
       const value = obj[prop];
-      if (typeof value === "object" && value !== null) {
-        xml += `${indent}<${prop}>\n${jsonToXml(value, indent + "  ")}${indent}</${prop}>\n`;
+      
+      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        xml += `${indent}<${prop}>\n${jsonToXml(value as Record<string, unknown>, indent + "  ")}${indent}</${prop}>\n`;
       } else {
         xml += `${indent}<${prop}>${value}</${prop}>\n`;
       }
@@ -211,7 +212,7 @@ export default function HomePage() {
   };
 
   const CustomTooltip = (props: TooltipProps<number, string>) => {
-    const { active, payload, label } = props as any;
+    const { active, payload } = props as any;
     if (active && payload && payload.length > 0) {
       const data = payload[0].payload as HistoryEntry;
 
