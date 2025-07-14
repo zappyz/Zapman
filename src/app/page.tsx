@@ -3,7 +3,16 @@
 import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
 import { fetchAPI, ApiResponse } from "./utils/fetchAPI";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, TooltipProps } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  TooltipProps,
+} from "recharts";
 
 export default function HomePage() {
   const [url, setUrl] = useState("");
@@ -14,15 +23,25 @@ export default function HomePage() {
   const [headers, setHeaders] = useState([{ key: "", value: "" }]);
   const [viewMode, setViewMode] = useState<"json" | "xml" | "html">("json");
   const [copied, setCopied] = useState(false);
-
-  type HistoryEntry = {
-    url: string;
-    method: string;
-    durationMs: number;
-    timestamp: number;
-  };
-
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [history, setHistory] = useState<
+    {
+      url: string;
+      method: string;
+      durationMs: number;
+      timestamp: number;
+      response: ApiResponse | null;
+    }[]
+  >([]);
+  const [selectedHistory, setSelectedHistory] = useState<
+    | {
+        url: string;
+        method: string;
+        durationMs: number;
+        timestamp: number;
+        response: ApiResponse | null;
+      }
+    | null
+  >(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +53,7 @@ export default function HomePage() {
       if (key) headersObj[key] = value;
     });
 
-    const isJson = headersObj['Content-Type'] === 'application/json';
+    const isJson = headersObj["Content-Type"] === "application/json";
 
     try {
       const res = await fetchAPI({
@@ -47,14 +66,15 @@ export default function HomePage() {
 
       setResponse(res);
 
-      setHistory(prev => [
+      setHistory((prev) => [
         ...prev.slice(-19),
         {
           url,
           method,
           timestamp: Date.now(),
           durationMs: res.durationMs,
-        }
+          response: res,
+        },
       ]);
 
       Sentry.addBreadcrumb({
@@ -66,7 +86,6 @@ export default function HomePage() {
       if (!res.ok) {
         Sentry.captureMessage(`Non-2xx response: ${res.status} from ${url}`);
       }
-
     } catch (err) {
       Sentry.captureException(err);
       console.error("Fetch error:", err);
@@ -116,11 +135,11 @@ export default function HomePage() {
     return xml.trim();
   };
 
-  const renderBody = () => {
-    if (!response) return null;
+  const renderBody = (res: ApiResponse | null) => {
+    if (!res) return null;
 
     if (viewMode === "json") {
-      let jsonObj = response.body;
+      let jsonObj = res.body;
       if (typeof jsonObj === "string") {
         try {
           jsonObj = JSON.parse(jsonObj);
@@ -137,12 +156,12 @@ export default function HomePage() {
 
     if (viewMode === "xml") {
       let xmlStr = "";
-      if (typeof response.body === "object") {
-        xmlStr = formatXml(jsonToXml(response.body));
-      } else if (typeof response.rawText === "string") {
-        xmlStr = formatXml(response.rawText);
+      if (typeof res.body === "object") {
+        xmlStr = formatXml(jsonToXml(res.body));
+      } else if (typeof res.rawText === "string") {
+        xmlStr = formatXml(res.rawText);
       } else {
-        xmlStr = String(response.body);
+        xmlStr = String(res.body);
       }
       return (
         <pre className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1 whitespace-pre-wrap">
@@ -152,17 +171,17 @@ export default function HomePage() {
     }
 
     if (viewMode === "html") {
-      if (response.contentType.includes("html")) {
+      if (res.contentType.includes("html")) {
         return (
           <div
             className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1 max-h-[400px] overflow-y-auto"
-            dangerouslySetInnerHTML={{ __html: response.rawText || String(response.body) }}
+            dangerouslySetInnerHTML={{ __html: res.rawText || String(res.body) }}
           />
         );
       } else {
         return (
           <pre className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1 whitespace-pre-wrap">
-            {response.rawText || String(response.body)}
+            {res.rawText || String(res.body)}
           </pre>
         );
       }
@@ -171,29 +190,29 @@ export default function HomePage() {
     return null;
   };
 
-  const getCopyText = (): string => {
-    if (!response) return "";
-    if (response.rawText) return response.rawText;
+  const getCopyText = (res: ApiResponse | null): string => {
+    if (!res) return "";
+    if (res.rawText) return res.rawText;
 
     if (viewMode === "json") {
-      if (typeof response.body === "object") {
-        return JSON.stringify(response.body, null, 2);
+      if (typeof res.body === "object") {
+        return JSON.stringify(res.body, null, 2);
       }
-      return String(response.body);
+      return String(res.body);
     }
 
     if (viewMode === "xml") {
-      if (typeof response.body === "object") {
-        return formatXml(jsonToXml(response.body));
+      if (typeof res.body === "object") {
+        return formatXml(jsonToXml(res.body));
       }
-      if (typeof response.rawText === "string") {
-        return formatXml(response.rawText);
+      if (typeof res.rawText === "string") {
+        return formatXml(res.rawText);
       }
-      return String(response.body);
+      return String(res.body);
     }
 
     if (viewMode === "html") {
-      return response.rawText || String(response.body);
+      return res.rawText || String(res.body);
     }
 
     return "";
@@ -201,7 +220,7 @@ export default function HomePage() {
 
   const copyToClipboard = async () => {
     try {
-      const text = getCopyText();
+      const text = getCopyText(selectedHistory?.response ?? response);
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -214,7 +233,7 @@ export default function HomePage() {
   const CustomTooltip = (props: TooltipProps<number, string>) => {
     const { active, payload } = props as any;
     if (active && payload && payload.length > 0) {
-      const data = payload[0].payload as HistoryEntry;
+      const data = payload[0].payload as typeof history[0];
 
       return (
         <div
@@ -228,10 +247,18 @@ export default function HomePage() {
             whiteSpace: "normal",
           }}
         >
-          <div><strong>URL:</strong> {data.url}</div>
-          <div><strong>Method:</strong> {data.method}</div>
-          <div><strong>Duration:</strong> {data.durationMs} ms</div>
-          <div><strong>Time:</strong> {new Date(data.timestamp).toLocaleTimeString()}</div>
+          <div>
+            <strong>URL:</strong> {data.url}
+          </div>
+          <div>
+            <strong>Method:</strong> {data.method}
+          </div>
+          <div>
+            <strong>Duration:</strong> {data.durationMs} ms
+          </div>
+          <div>
+            <strong>Time:</strong> {new Date(data.timestamp).toLocaleTimeString()}
+          </div>
         </div>
       );
     }
@@ -265,7 +292,9 @@ export default function HomePage() {
                 className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-600"
               >
                 {["GET", "POST", "PUT", "DELETE", "PATCH"].map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
               </select>
             </div>
@@ -327,43 +356,59 @@ export default function HomePage() {
           </button>
         </form>
 
-        {response && (
+        {(response || selectedHistory) && (
           <div className="mt-8 p-4 bg-zinc-800 rounded-xl border border-zinc-700">
             <h2 className="text-xl font-semibold text-blue-300 mb-2">Response</h2>
+
+            {/* Show info for selectedHistory if exists, else current response */}
             <p className="mb-1">
-              Status: <span className="font-mono">{response.status} {response.statusText}</span>
+              Status:{" "}
+              <span className="font-mono">
+                {selectedHistory?.response?.status ?? response?.status}{" "}
+                {selectedHistory?.response?.statusText ?? response?.statusText}
+              </span>
             </p>
             <p className="mb-1">
-              Time: <span className="font-mono">{response.durationMs}ms</span>
+              Time:{" "}
+              <span className="font-mono">
+                {selectedHistory?.response?.durationMs ?? response?.durationMs}ms
+              </span>
             </p>
             <p className="mb-3">
-              Content-Type: <span className="font-mono">{response.contentType}</span>
+              Content-Type:{" "}
+              <span className="font-mono">
+                {selectedHistory?.response?.contentType ?? response?.contentType}
+              </span>
             </p>
-            
+
             {history.length > 0 && (
               <div className="mt-10">
-                <h2 className="text-2xl font-bold mb-3 text-blue-400">Request Duration History (last 20)</h2>
+                <h2 className="text-2xl font-bold mb-3 text-blue-400">
+                  Request Duration History (last 20)
+                </h2>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={history} barCategoryGap="20%" barGap={5}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
-                    dataKey="timestamp"
-                    tickFormatter={(ts) =>
-                      new Date(ts).toLocaleTimeString(undefined, {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      })
-                    }
+                      dataKey="timestamp"
+                      tickFormatter={(ts) =>
+                        new Date(ts).toLocaleTimeString(undefined, {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
+                      }
                     />
                     <YAxis unit="ms" />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar
-                    dataKey="durationMs"
-                    fill="#3b82f6"
-                    maxBarSize={30}
-                    isAnimationActive={true}
-                    animationDuration={500}
+                      dataKey="durationMs"
+                      fill="#3b82f6"
+                      maxBarSize={30}
+                      onClick={(_, index) => {
+                        const entry = history[index];
+                        if (entry) setSelectedHistory(entry);
+                      }}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -375,10 +420,10 @@ export default function HomePage() {
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode as "json" | "xml" | "html")}
-                  className={`py-1 px-3 rounded-lg text-sm font-semibold transition ${
+                  className={`px-3 py-1 rounded ${
                     viewMode === mode
-                      ? "bg-blue-400 text-black"
-                      : "bg-zinc-700 hover:bg-zinc-600"
+                      ? "bg-blue-600 text-white"
+                      : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
                   }`}
                 >
                   {mode.toUpperCase()}
@@ -386,13 +431,19 @@ export default function HomePage() {
               ))}
               <button
                 onClick={copyToClipboard}
-                className="ml-auto py-1 px-3 rounded-lg bg-green-500 hover:bg-green-600 text-black font-semibold text-sm"
+                className="ml-auto bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white"
               >
                 {copied ? "Copied!" : "Copy"}
               </button>
+              <button
+                onClick={() => setSelectedHistory(null)}
+                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white"
+              >
+                Clear History Selection
+              </button>
             </div>
 
-            <div className="overflow-auto max-h-96">{renderBody()}</div>
+            <div className="max-h-[300px] overflow-auto">{renderBody(selectedHistory?.response ?? response)}</div>
           </div>
         )}
       </div>
