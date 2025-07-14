@@ -442,7 +442,6 @@ export default function HomePage() {
                 Clear History Selection
               </button>
             </div>
-
             <div className="max-h-[300px] overflow-auto">{renderBody(selectedHistory?.response ?? response)}</div>
           </div>
         )}
