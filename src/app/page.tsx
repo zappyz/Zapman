@@ -44,6 +44,7 @@ export default function HomePage() {
   >(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setSelectedHistory(null);
     e.preventDefault();
     setLoading(true);
     setResponse(null);
