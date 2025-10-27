@@ -24,7 +24,10 @@ export type ApiResponse = {
   ok: boolean;
 };
 
-function buildParams(url: string, params?: Record<string, string | number | boolean>): string {
+function buildParams(
+  url: string,
+  params?: Record<string, string | number | boolean>,
+): string {
   if (!params) return url;
   const urlObj = new URL(url, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {
@@ -33,7 +36,9 @@ function buildParams(url: string, params?: Record<string, string | number | bool
   return urlObj.toString();
 }
 
-export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse> {
+export async function fetchAPI(
+  options: ApiRequestOptions,
+): Promise<ApiResponse> {
   const {
     url,
     method,
@@ -56,10 +61,11 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
     try {
       let requestBody: string | undefined = undefined;
 
-      if (['POST', 'PUT', 'PATCH'].includes(method)) {
-        if (typeof body === 'object') {
+      if (["POST", "PUT", "PATCH"].includes(method)) {
+        if (typeof body === "object") {
           requestBody = JSON.stringify(body);
-          headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+          headers["Content-Type"] =
+            headers["Content-Type"] || "application/json";
         } else {
           requestBody = body as string;
         }
@@ -84,7 +90,10 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
       let parsedBody: any;
       const format = responseFormat?.toLowerCase() || "";
 
-      if (format === "json" || (!format && contentType.includes("application/json"))) {
+      if (
+        format === "json" ||
+        (!format && contentType.includes("application/json"))
+      ) {
         try {
           parsedBody = JSON.parse(rawText);
         } catch {
@@ -92,9 +101,12 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
         }
       } else if (
         format === "xml" ||
-        (!format && (contentType.includes("application/xml") || contentType.includes("text/xml") || contentType.includes("application/xhtml+xml")))
+        (!format &&
+          (contentType.includes("application/xml") ||
+            contentType.includes("text/xml") ||
+            contentType.includes("application/xhtml+xml")))
       ) {
-        if (typeof DOMParser !== 'undefined') {
+        if (typeof DOMParser !== "undefined") {
           const parser = new DOMParser();
           parsedBody = parser.parseFromString(rawText, "application/xml");
         } else {
@@ -104,7 +116,7 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
         format === "html" ||
         (!format && contentType.includes("text/html"))
       ) {
-        if (typeof DOMParser !== 'undefined') {
+        if (typeof DOMParser !== "undefined") {
           const parser = new DOMParser();
           parsedBody = parser.parseFromString(rawText, "text/html");
         } else {
@@ -128,14 +140,15 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
         durationMs,
         sizeInBytes,
         ok: response.ok,
-        ...(includeRawText ? { rawText } : {})
+        ...(includeRawText ? { rawText } : {}),
       };
     } catch (error: any) {
       clearTimeout(timeoutId);
       lastError = error;
 
       // Only retry on timeout or fetch failure
-      const isRetriable = error.name === 'AbortError' || error.message.includes('Network');
+      const isRetriable =
+        error.name === "AbortError" || error.message.includes("Network");
       if (!isRetriable || attempt === retries) {
         return {
           status: 0,
@@ -149,7 +162,9 @@ export async function fetchAPI(options: ApiRequestOptions): Promise<ApiResponse>
         };
       }
 
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * Math.pow(2, attempt)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelayMs * Math.pow(2, attempt)),
+      );
     }
   }
 

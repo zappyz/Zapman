@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Cell,
   TooltipProps,
 } from "recharts";
 
@@ -32,16 +33,15 @@ export default function HomePage() {
       response: ApiResponse | null;
     }[]
   >([]);
-  const [selectedHistory, setSelectedHistory] = useState<
-    | {
-        url: string;
-        method: string;
-        durationMs: number;
-        timestamp: number;
-        response: ApiResponse | null;
-      }
-    | null
-  >(null);
+  const [selectedHistory, setSelectedHistory] = useState<{
+    url: string;
+    method: string;
+    durationMs: number;
+    timestamp: number;
+    response: ApiResponse | null;
+  } | null>(null);
+
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     setSelectedHistory(null);
@@ -116,14 +116,18 @@ export default function HomePage() {
     const newHeaders = headers.filter((_, i) => i !== index);
     setHeaders(newHeaders);
   };
-  
+
   const jsonToXml = (obj: Record<string, unknown>, indent = ""): string => {
     let xml = "";
     for (const prop in obj) {
       if (!Object.prototype.hasOwnProperty.call(obj, prop)) continue;
       const value = obj[prop];
-      
-      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
         xml += `${indent}<${prop}>\n${jsonToXml(value as Record<string, unknown>, indent + "  ")}${indent}</${prop}>\n`;
       } else {
         xml += `${indent}<${prop}>${value}</${prop}>\n`;
@@ -132,9 +136,7 @@ export default function HomePage() {
     return xml;
   };
 
-  const formatXml = (xml: string) => {
-    return xml.trim();
-  };
+  const formatXml = (xml: string) => xml.trim();
 
   const renderBody = (res: ApiResponse | null) => {
     if (!res) return null;
@@ -144,13 +146,13 @@ export default function HomePage() {
       if (typeof jsonObj === "string") {
         try {
           jsonObj = JSON.parse(jsonObj);
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
       return (
         <pre className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1">
-          {typeof jsonObj === "object" ? JSON.stringify(jsonObj, null, 2) : String(jsonObj)}
+          {typeof jsonObj === "object"
+            ? JSON.stringify(jsonObj, null, 2)
+            : String(jsonObj)}
         </pre>
       );
     }
@@ -176,7 +178,9 @@ export default function HomePage() {
         return (
           <div
             className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1 max-h-[400px] overflow-y-auto"
-            dangerouslySetInnerHTML={{ __html: res.rawText || String(res.body) }}
+            dangerouslySetInnerHTML={{
+              __html: res.rawText || String(res.body),
+            }}
           />
         );
       } else {
@@ -196,25 +200,18 @@ export default function HomePage() {
     if (res.rawText) return res.rawText;
 
     if (viewMode === "json") {
-      if (typeof res.body === "object") {
+      if (typeof res.body === "object")
         return JSON.stringify(res.body, null, 2);
-      }
       return String(res.body);
     }
 
     if (viewMode === "xml") {
-      if (typeof res.body === "object") {
-        return formatXml(jsonToXml(res.body));
-      }
-      if (typeof res.rawText === "string") {
-        return formatXml(res.rawText);
-      }
+      if (typeof res.body === "object") return formatXml(jsonToXml(res.body));
+      if (typeof res.rawText === "string") return formatXml(res.rawText);
       return String(res.body);
     }
 
-    if (viewMode === "html") {
-      return res.rawText || String(res.body);
-    }
+    if (viewMode === "html") return res.rawText || String(res.body);
 
     return "";
   };
@@ -234,8 +231,7 @@ export default function HomePage() {
   const CustomTooltip = (props: TooltipProps<number, string>) => {
     const { active, payload } = props as any;
     if (active && payload && payload.length > 0) {
-      const data = payload[0].payload as typeof history[0];
-
+      const data = payload[0].payload as (typeof history)[0];
       return (
         <div
           style={{
@@ -258,7 +254,8 @@ export default function HomePage() {
             <strong>Duration:</strong> {data.durationMs} ms
           </div>
           <div>
-            <strong>Time:</strong> {new Date(data.timestamp).toLocaleTimeString()}
+            <strong>Time:</strong>{" "}
+            {new Date(data.timestamp).toLocaleTimeString()}
           </div>
         </div>
       );
@@ -270,10 +267,11 @@ export default function HomePage() {
     <main className="p-6 max-w-3xl mx-auto text-white">
       <div className="bg-zinc-900 p-6 rounded-2xl shadow-xl border border-zinc-700">
         <h1 className="text-3xl font-bold mb-6 text-blue-400">Zapman</h1>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block mb-1 font-semibold text-sm">Request URL</label>
+            <label className="block mb-1 font-semibold text-sm">
+              Request URL
+            </label>
             <input
               type="text"
               placeholder="https://api.example.com/endpoint"
@@ -339,7 +337,9 @@ export default function HomePage() {
 
           {["POST", "PUT", "PATCH"].includes(method) && (
             <div>
-              <label className="block mb-1 font-semibold text-sm">Body (JSON)</label>
+              <label className="block mb-1 font-semibold text-sm">
+                Body (JSON)
+              </label>
               <textarea
                 placeholder='{"key": "value"}'
                 value={body}
@@ -359,9 +359,9 @@ export default function HomePage() {
 
         {(response || selectedHistory) && (
           <div className="mt-8 p-4 bg-zinc-800 rounded-xl border border-zinc-700">
-            <h2 className="text-xl font-semibold text-blue-300 mb-2">Response</h2>
-
-            {/* Show info for selectedHistory if exists, else current response */}
+            <h2 className="text-xl font-semibold text-blue-300 mb-2">
+              Response
+            </h2>
             <p className="mb-1">
               Status:{" "}
               <span className="font-mono">
@@ -372,13 +372,15 @@ export default function HomePage() {
             <p className="mb-1">
               Time:{" "}
               <span className="font-mono">
-                {selectedHistory?.response?.durationMs ?? response?.durationMs}ms
+                {selectedHistory?.response?.durationMs ?? response?.durationMs}
+                ms
               </span>
             </p>
             <p className="mb-3">
               Content-Type:{" "}
               <span className="font-mono">
-                {selectedHistory?.response?.contentType ?? response?.contentType}
+                {selectedHistory?.response?.contentType ??
+                  response?.contentType}
               </span>
             </p>
 
@@ -392,25 +394,28 @@ export default function HomePage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="timestamp"
-                      tickFormatter={(ts) =>
-                        new Date(ts).toLocaleTimeString(undefined, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })
-                      }
+                      tickFormatter={(ts) => new Date(ts).toLocaleTimeString()}
                     />
                     <YAxis unit="ms" />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} cursor={false} />
+
                     <Bar
                       dataKey="durationMs"
-                      fill="#3b82f6"
                       maxBarSize={30}
+                      onMouseLeave={() => setActiveIndex(null)}
+                      onMouseEnter={(_, index) => setActiveIndex(index)}
                       onClick={(_, index) => {
                         const entry = history[index];
                         if (entry) setSelectedHistory(entry);
                       }}
-                    />
+                    >
+                      {history.map((entry, index) => (
+                        <Cell
+                          key={index}
+                          fill={index === activeIndex ? "#2563eb" : "#3b82f6"}
+                        />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -421,15 +426,12 @@ export default function HomePage() {
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode as "json" | "xml" | "html")}
-                  className={`px-3 py-1 rounded ${
-                    viewMode === mode
-                      ? "bg-blue-600 text-white"
-                      : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                  }`}
+                  className={`px-3 py-1 rounded ${viewMode === mode ? "bg-blue-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"}`}
                 >
                   {mode.toUpperCase()}
                 </button>
               ))}
+
               <button
                 onClick={copyToClipboard}
                 className="ml-auto bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white"
@@ -437,13 +439,19 @@ export default function HomePage() {
                 {copied ? "Copied!" : "Copy"}
               </button>
               <button
-                onClick={() => setSelectedHistory(null)}
+                onClick={() => {
+                  setHistory([]);
+                  setSelectedHistory(null);
+                }}
                 className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white"
               >
-                Clear History Selection
+                Clear History
               </button>
             </div>
-            <div className="max-h-[300px] overflow-auto">{renderBody(selectedHistory?.response ?? response)}</div>
+
+            <div className="max-h-[300px] overflow-auto">
+              {renderBody(selectedHistory?.response ?? response)}
+            </div>
           </div>
         )}
       </div>
