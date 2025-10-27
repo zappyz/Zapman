@@ -22,6 +22,7 @@ export default function HomePage() {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [headers, setHeaders] = useState([{ key: "", value: "" }]);
+  const [params, setParams] = useState([{ key: "", value: "" }]);
   const [viewMode, setViewMode] = useState<"json" | "xml" | "html">("json");
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<
@@ -43,22 +44,38 @@ export default function HomePage() {
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
+  const safeJsonParse = (str: string) => {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return str;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     setSelectedHistory(null);
     e.preventDefault();
     setLoading(true);
     setResponse(null);
 
+    // Build headers
     const headersObj: Record<string, string> = {};
     headers.forEach(({ key, value }) => {
       if (key) headersObj[key] = value;
     });
 
+    // Build query string
+    const queryString = params
+      .filter((p) => p.key)
+      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .join("&");
+    const finalUrl = queryString ? `${url}?${queryString}` : url;
+
     const isJson = headersObj["Content-Type"] === "application/json";
 
     try {
       const res = await fetchAPI({
-        url,
+        url: finalUrl,
         method,
         headers: headersObj,
         body: isJson ? safeJsonParse(body) : body,
@@ -70,7 +87,7 @@ export default function HomePage() {
       setHistory((prev) => [
         ...prev.slice(-19),
         {
-          url,
+          url: finalUrl,
           method,
           timestamp: Date.now(),
           durationMs: res.durationMs,
@@ -80,12 +97,14 @@ export default function HomePage() {
 
       Sentry.addBreadcrumb({
         category: "http",
-        message: `Requested ${url} (${method})`,
+        message: `Requested ${finalUrl} (${method})`,
         level: "info",
       });
 
       if (!res.ok) {
-        Sentry.captureMessage(`Non-2xx response: ${res.status} from ${url}`);
+        Sentry.captureMessage(
+          `Non-2xx response: ${res.status} from ${finalUrl}`,
+        );
       }
     } catch (err) {
       Sentry.captureException(err);
@@ -96,14 +115,6 @@ export default function HomePage() {
     setViewMode("json");
   };
 
-  const safeJsonParse = (str: string) => {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return str;
-    }
-  };
-
   const updateHeader = (index: number, key: "key" | "value", value: string) => {
     const newHeaders = [...headers];
     newHeaders[index][key] = value;
@@ -111,24 +122,33 @@ export default function HomePage() {
   };
 
   const addHeaderField = () => setHeaders([...headers, { key: "", value: "" }]);
+  const removeHeaderField = (index: number) =>
+    setHeaders(headers.filter((_, i) => i !== index));
 
-  const removeHeaderField = (index: number) => {
-    const newHeaders = headers.filter((_, i) => i !== index);
-    setHeaders(newHeaders);
+  const updateParam = (index: number, key: "key" | "value", value: string) => {
+    const newParams = [...params];
+    newParams[index][key] = value;
+    setParams(newParams);
   };
+
+  const addParamField = () => setParams([...params, { key: "", value: "" }]);
+  const removeParamField = (index: number) =>
+    setParams(params.filter((_, i) => i !== index));
 
   const jsonToXml = (obj: Record<string, unknown>, indent = ""): string => {
     let xml = "";
     for (const prop in obj) {
       if (!Object.prototype.hasOwnProperty.call(obj, prop)) continue;
       const value = obj[prop];
-
       if (
         typeof value === "object" &&
         value !== null &&
         !Array.isArray(value)
       ) {
-        xml += `${indent}<${prop}>\n${jsonToXml(value as Record<string, unknown>, indent + "  ")}${indent}</${prop}>\n`;
+        xml += `${indent}<${prop}>\n${jsonToXml(
+          value as Record<string, unknown>,
+          indent + "  ",
+        )}${indent}</${prop}>\n`;
       } else {
         xml += `${indent}<${prop}>${value}</${prop}>\n`;
       }
@@ -174,7 +194,7 @@ export default function HomePage() {
     }
 
     if (viewMode === "html") {
-      if (res.contentType.includes("html")) {
+      if (res.contentType?.includes("html")) {
         return (
           <div
             className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1 max-h-[400px] overflow-y-auto"
@@ -268,6 +288,7 @@ export default function HomePage() {
       <div className="bg-zinc-900 p-6 rounded-2xl shadow-xl border border-zinc-700">
         <h1 className="text-3xl font-bold mb-6 text-blue-400">Zapman</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* URL */}
           <div>
             <label className="block mb-1 font-semibold text-sm">
               Request URL
@@ -282,6 +303,7 @@ export default function HomePage() {
             />
           </div>
 
+          {/* Method */}
           <div className="flex gap-4 items-center">
             <div className="flex-1">
               <label className="block mb-1 font-semibold text-sm">Method</label>
@@ -299,6 +321,46 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Query Params */}
+          <div>
+            <label className="block mb-2 font-semibold text-sm">
+              Query Params
+            </label>
+            {params.map((p, i) => (
+              <div key={i} className="flex gap-2 mb-2 items-center">
+                <input
+                  type="text"
+                  placeholder="Key"
+                  className="flex-1 p-2 rounded-lg bg-zinc-800 border border-zinc-600"
+                  value={p.key}
+                  onChange={(e) => updateParam(i, "key", e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder="Value"
+                  className="flex-1 p-2 rounded-lg bg-zinc-800 border border-zinc-600"
+                  value={p.value}
+                  onChange={(e) => updateParam(i, "value", e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeParamField(i)}
+                  className="text-red-400 text-xs hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addParamField}
+              className="text-sm text-blue-400 hover:underline"
+            >
+              + Add Param
+            </button>
+          </div>
+
+          {/* Headers */}
           <div>
             <label className="block mb-2 font-semibold text-sm">Headers</label>
             {headers.map((h, i) => (
@@ -335,6 +397,7 @@ export default function HomePage() {
             </button>
           </div>
 
+          {/* Body */}
           {["POST", "PUT", "PATCH"].includes(method) && (
             <div>
               <label className="block mb-1 font-semibold text-sm">
@@ -357,6 +420,7 @@ export default function HomePage() {
           </button>
         </form>
 
+        {/* Response and history */}
         {(response || selectedHistory) && (
           <div className="mt-8 p-4 bg-zinc-800 rounded-xl border border-zinc-700">
             <h2 className="text-xl font-semibold text-blue-300 mb-2">
@@ -398,7 +462,6 @@ export default function HomePage() {
                     />
                     <YAxis unit="ms" />
                     <Tooltip content={<CustomTooltip />} cursor={false} />
-
                     <Bar
                       dataKey="durationMs"
                       maxBarSize={30}
@@ -421,7 +484,7 @@ export default function HomePage() {
               </div>
             )}
 
-            <div className="flex gap-3 mb-3">
+            <div className="flex gap-3 mb-3 mt-3">
               {["json", "xml", "html"].map((mode) => (
                 <button
                   key={mode}
@@ -431,7 +494,6 @@ export default function HomePage() {
                   {mode.toUpperCase()}
                 </button>
               ))}
-
               <button
                 onClick={copyToClipboard}
                 className="ml-auto bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white"
@@ -440,15 +502,38 @@ export default function HomePage() {
               </button>
               <button
                 onClick={() => {
+                  setUrl("");
+                  setMethod("GET");
+                  setBody("");
+                  setHeaders([{ key: "", value: "" }]);
+                  setParams([{ key: "", value: "" }]);
+                  setActiveIndex(null);
+                  setViewMode("json");
+                  setCopied(false);
+                }}
+                className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-white"
+              >
+                Reset Fields
+              </button>
+
+              <button
+                onClick={() => {
                   setHistory([]);
                   setSelectedHistory(null);
+                  setUrl("");
+                  setMethod("GET");
+                  setBody("");
+                  setHeaders([{ key: "", value: "" }]);
+                  setParams([{ key: "", value: "" }]);
+                  setResponse(null);
+                  setActiveIndex(null);
+                  setViewMode("json");
                 }}
                 className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white"
               >
                 Clear History
               </button>
             </div>
-
             <div className="max-h-[300px] overflow-auto">
               {renderBody(selectedHistory?.response ?? response)}
             </div>
