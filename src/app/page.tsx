@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
@@ -67,7 +67,9 @@ export default function HomePage() {
     // Build query string
     const queryString = params
       .filter((p) => p.key)
-      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .map(
+        (p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`
+      )
       .join("&");
     const finalUrl = queryString ? `${url}?${queryString}` : url;
 
@@ -103,7 +105,7 @@ export default function HomePage() {
 
       if (!res.ok) {
         Sentry.captureMessage(
-          `Non-2xx response: ${res.status} from ${finalUrl}`,
+          `Non-2xx response: ${res.status} from ${finalUrl}`
         );
       }
     } catch (err) {
@@ -140,14 +142,10 @@ export default function HomePage() {
     for (const prop in obj) {
       if (!Object.prototype.hasOwnProperty.call(obj, prop)) continue;
       const value = obj[prop];
-      if (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value)
-      ) {
+      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         xml += `${indent}<${prop}>\n${jsonToXml(
           value as Record<string, unknown>,
-          indent + "  ",
+          indent + "  "
         )}${indent}</${prop}>\n`;
       } else {
         xml += `${indent}<${prop}>${value}</${prop}>\n`;
@@ -198,9 +196,7 @@ export default function HomePage() {
         return (
           <div
             className="bg-black/30 p-3 rounded text-sm overflow-auto mt-1 max-h-[400px] overflow-y-auto"
-            dangerouslySetInnerHTML={{
-              __html: res.rawText || String(res.body),
-            }}
+            dangerouslySetInnerHTML={{ __html: res.rawText || String(res.body) }}
           />
         );
       } else {
@@ -220,8 +216,7 @@ export default function HomePage() {
     if (res.rawText) return res.rawText;
 
     if (viewMode === "json") {
-      if (typeof res.body === "object")
-        return JSON.stringify(res.body, null, 2);
+      if (typeof res.body === "object") return JSON.stringify(res.body, null, 2);
       return String(res.body);
     }
 
@@ -290,9 +285,7 @@ export default function HomePage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* URL */}
           <div>
-            <label className="block mb-1 font-semibold text-sm">
-              Request URL
-            </label>
+            <label className="block mb-1 font-semibold text-sm">Request URL</label>
             <input
               type="text"
               placeholder="https://api.example.com/endpoint"
@@ -313,9 +306,7 @@ export default function HomePage() {
                 className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-600"
               >
                 {["GET", "POST", "PUT", "DELETE", "PATCH"].map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
               </select>
             </div>
@@ -323,9 +314,7 @@ export default function HomePage() {
 
           {/* Query Params */}
           <div>
-            <label className="block mb-2 font-semibold text-sm">
-              Query Params
-            </label>
+            <label className="block mb-2 font-semibold text-sm">Query Params</label>
             {params.map((p, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <input
@@ -342,22 +331,10 @@ export default function HomePage() {
                   value={p.value}
                   onChange={(e) => updateParam(i, "value", e.target.value)}
                 />
-                <button
-                  type="button"
-                  onClick={() => removeParamField(i)}
-                  className="text-red-400 text-xs hover:underline"
-                >
-                  Remove
-                </button>
+                <button type="button" onClick={() => removeParamField(i)} className="text-red-400 text-xs hover:underline">Remove</button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addParamField}
-              className="text-sm text-blue-400 hover:underline"
-            >
-              + Add Param
-            </button>
+            <button type="button" onClick={addParamField} className="text-sm text-blue-400 hover:underline">+ Add Param</button>
           </div>
 
           {/* Headers */}
@@ -379,30 +356,16 @@ export default function HomePage() {
                   value={h.value}
                   onChange={(e) => updateHeader(i, "value", e.target.value)}
                 />
-                <button
-                  type="button"
-                  onClick={() => removeHeaderField(i)}
-                  className="text-red-400 text-xs hover:underline"
-                >
-                  Remove
-                </button>
+                <button type="button" onClick={() => removeHeaderField(i)} className="text-red-400 text-xs hover:underline">Remove</button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addHeaderField}
-              className="text-sm text-blue-400 hover:underline"
-            >
-              + Add Header
-            </button>
+            <button type="button" onClick={addHeaderField} className="text-sm text-blue-400 hover:underline">+ Add Header</button>
           </div>
 
           {/* Body */}
           {["POST", "PUT", "PATCH"].includes(method) && (
             <div>
-              <label className="block mb-1 font-semibold text-sm">
-                Body (JSON)
-              </label>
+              <label className="block mb-1 font-semibold text-sm">Body (JSON)</label>
               <textarea
                 placeholder='{"key": "value"}'
                 value={body}
@@ -412,10 +375,7 @@ export default function HomePage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition duration-200"
-          >
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition duration-200">
             {loading ? "Sending..." : "Send Request"}
           </button>
         </form>
@@ -423,43 +383,18 @@ export default function HomePage() {
         {/* Response and history */}
         {(response || selectedHistory) && (
           <div className="mt-8 p-4 bg-zinc-800 rounded-xl border border-zinc-700">
-            <h2 className="text-xl font-semibold text-blue-300 mb-2">
-              Response
-            </h2>
-            <p className="mb-1">
-              Status:{" "}
-              <span className="font-mono">
-                {selectedHistory?.response?.status ?? response?.status}{" "}
-                {selectedHistory?.response?.statusText ?? response?.statusText}
-              </span>
-            </p>
-            <p className="mb-1">
-              Time:{" "}
-              <span className="font-mono">
-                {selectedHistory?.response?.durationMs ?? response?.durationMs}
-                ms
-              </span>
-            </p>
-            <p className="mb-3">
-              Content-Type:{" "}
-              <span className="font-mono">
-                {selectedHistory?.response?.contentType ??
-                  response?.contentType}
-              </span>
-            </p>
+            <h2 className="text-xl font-semibold text-blue-300 mb-2">Response</h2>
+            <p className="mb-1">Status: <span className="font-mono">{selectedHistory?.response?.status ?? response?.status} {selectedHistory?.response?.statusText ?? response?.statusText}</span></p>
+            <p className="mb-1">Time: <span className="font-mono">{selectedHistory?.response?.durationMs ?? response?.durationMs}ms</span></p>
+            <p className="mb-3">Content-Type: <span className="font-mono">{selectedHistory?.response?.contentType ?? response?.contentType}</span></p>
 
             {history.length > 0 && (
               <div className="mt-10">
-                <h2 className="text-2xl font-bold mb-3 text-blue-400">
-                  Request Duration History (last 20)
-                </h2>
+                <h2 className="text-2xl font-bold mb-3 text-blue-400">Request Duration History (last 20)</h2>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={history} barCategoryGap="20%" barGap={5}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="timestamp"
-                      tickFormatter={(ts) => new Date(ts).toLocaleTimeString()}
-                    />
+                    <XAxis dataKey="timestamp" tickFormatter={(ts) => new Date(ts).toLocaleTimeString()} />
                     <YAxis unit="ms" />
                     <Tooltip content={<CustomTooltip />} cursor={false} />
                     <Bar
@@ -473,10 +408,7 @@ export default function HomePage() {
                       }}
                     >
                       {history.map((entry, index) => (
-                        <Cell
-                          key={index}
-                          fill={index === activeIndex ? "#2563eb" : "#3b82f6"}
-                        />
+                        <Cell key={index} fill={index === activeIndex ? "#2563eb" : "#3b82f6"} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -485,58 +417,41 @@ export default function HomePage() {
             )}
 
             <div className="flex gap-3 mb-3 mt-3">
-              {["json", "xml", "html"].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode as "json" | "xml" | "html")}
-                  className={`px-3 py-1 rounded ${viewMode === mode ? "bg-blue-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"}`}
-                >
-                  {mode.toUpperCase()}
-                </button>
+              {["json","xml","html"].map(mode => (
+                <button key={mode} onClick={() => setViewMode(mode as "json"|"xml"|"html")} className={`px-3 py-1 rounded ${viewMode===mode?"bg-blue-600 text-white":"bg-zinc-700 text-zinc-300 hover:bg-zinc-600"}`}>{mode.toUpperCase()}</button>
               ))}
+              <button onClick={copyToClipboard} className="ml-auto bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white">{copied?"Copied!":"Copy"}</button>
               <button
-                onClick={copyToClipboard}
-                className="ml-auto bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </button>
-              <button
-                onClick={() => {
-                  setUrl("");
-                  setMethod("GET");
-                  setBody("");
-                  setHeaders([{ key: "", value: "" }]);
-                  setParams([{ key: "", value: "" }]);
-                  setActiveIndex(null);
-                  setViewMode("json");
-                  setCopied(false);
-                }}
-                className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-white"
-              >
-                Reset Fields
-              </button>
+  onClick={() => {
+    setUrl("");
+    setMethod("GET");
+    setBody("");
+    setHeaders([{ key: "", value: "" }]);
+    setParams([{ key: "", value: "" }]);
+    setActiveIndex(null);
+    setViewMode("json");
+    setCopied(false);
+  }}
+  className="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-white"
+>
+  Reset Fields
+</button>
 
-              <button
-                onClick={() => {
-                  setHistory([]);
-                  setSelectedHistory(null);
-                  setUrl("");
-                  setMethod("GET");
-                  setBody("");
-                  setHeaders([{ key: "", value: "" }]);
-                  setParams([{ key: "", value: "" }]);
-                  setResponse(null);
-                  setActiveIndex(null);
-                  setViewMode("json");
-                }}
-                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white"
-              >
-                Clear History
-              </button>
+              <button onClick={()=>{
+                setHistory([]);
+                setSelectedHistory(null);
+                setUrl("");
+                setMethod("GET");
+                setBody("");
+                setHeaders([{ key: "", value: "" }]);
+                setParams([{ key: "", value: "" }]);
+                setResponse(null);
+                setActiveIndex(null);
+                setViewMode("json");
+                }} 
+                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white">Clear History</button>
             </div>
-            <div className="max-h-[300px] overflow-auto">
-              {renderBody(selectedHistory?.response ?? response)}
-            </div>
+            <div className="max-h-[300px] overflow-auto">{renderBody(selectedHistory?.response ?? response)}</div>
           </div>
         )}
       </div>
